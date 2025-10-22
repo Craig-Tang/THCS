@@ -47,23 +47,46 @@ def build_target_graph_boolean(M: Dict[int, Set[int]]) -> Dict[int, Set[int]]:
 
 
 def core_numbers(graph: Dict[int, Set[int]]) -> Dict[int, int]:
-    adj = {u: set(vs) for u, vs in graph.items()}
-    import heapq
-    deg = {u: len(vs) for u, vs in adj.items()}
-    heap = [(d, u) for u, d in deg.items()]
-    heapq.heapify(heap)
-    core: Dict[int, int] = {u: 0 for u in adj}
-    while heap:
-        d, u = heapq.heappop(heap)
-        if d != deg.get(u, 0):
-            continue
-        core[u] = d
-        for v in list(adj.get(u, [])):
-            if deg.get(v, -1) > d:
+    if not graph:
+        return {}
+    adj: Dict[int, Set[int]] = {u: set(vs) for u, vs in graph.items()}
+    nodes = list(adj.keys())
+    n = len(nodes)
+    deg: Dict[int, int] = {u: len(adj[u]) for u in nodes}
+    if n == 0:
+        return {}
+    max_deg = max(deg.values(), default=0)
+    bin_count = [0] * (max_deg + 1)
+    for u in nodes:
+        bin_count[deg[u]] += 1
+    start = [0] * (max_deg + 1)
+    s = 0
+    for d in range(max_deg + 1):
+        start[d] = s
+        s += bin_count[d]
+    vert = [0] * n
+    pos: Dict[int, int] = {}
+    next_idx = start[:]
+    for u in nodes:
+        d = deg[u]
+        pos[u] = next_idx[d]
+        vert[pos[u]] = u
+        next_idx[d] += 1
+    core: Dict[int, int] = {}
+    for i in range(n):
+        u = vert[i]
+        core[u] = deg[u]
+        for v in adj[u]:
+            if deg[v] > deg[u]:
+                dv = deg[v]
+                pv = pos[v]
+                pw = start[dv]
+                w = vert[pw]
+                if v != w:
+                    vert[pv], vert[pw] = vert[pw], vert[pv]
+                    pos[v], pos[w] = pw, pv
+                start[dv] += 1
                 deg[v] -= 1
-                heapq.heappush(heap, (deg[v], v))
-            adj[v].discard(u)
-        adj.pop(u, None)
     return core
 
 
